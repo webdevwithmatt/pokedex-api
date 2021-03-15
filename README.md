@@ -15,3 +15,9 @@ You can fork and clone this repo, or create a new one from scratch and follow al
 [Watch](https://www.youtube.com/watch?v=WHshWCQvg_Q&list=PLSwIxbgo4ojtYwVrLOiX5THfQkrCixMEq&index=1)
 
 _This video makes no code changes_
+
+### Video 2: What is a REST API?
+
+[Watch](https://www.youtube.com/watch?v=bT_n_Sb3J3U&list=PLSwIxbgo4ojtYwVrLOiX5THfQkrCixMEq&index=2)
+
+_This video makes no code changes_
