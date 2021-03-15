@@ -12,6 +12,6 @@ You can fork and clone this repo, or create a new one from scratch and follow al
 
 ### Video 1: Introduction
 
-[Watch](https://www.youtube.com/watch?v=-i24de_R3Rc&list=PLSwIxbgo4ojtYwVrLOiX5THfQkrCixMEq&index=3)
+[Watch](https://www.youtube.com/watch?v=WHshWCQvg_Q&list=PLSwIxbgo4ojtYwVrLOiX5THfQkrCixMEq&index=1)
 
 _This video makes no code changes_
