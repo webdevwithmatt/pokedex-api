@@ -598,4 +598,3 @@ app.post('/trainer/:trainerId/catch/:pokemonId', async (req, res) => {
 }
 ```
 - You should also see a new record appear in the `pokemon_trainers` table in your database
-
