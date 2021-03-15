@@ -1,3 +1,4 @@
+const bodyParser = require('body-parser');
 const express = require('express');
 const Sequelize = require('sequelize');
 
@@ -19,6 +20,12 @@ module.exports.envVars = {
 
 const models = require(`${__dirname}/models/models`);
 module.exports.envVars.models = models;
+
+app.use(bodyParser.json());
+app.use((req, res, next) => {
+    res.setHeader('Content-Type', 'application/json');
+    return next();
+});
 
 require(`${__dirname}/routes/pokemon`);
 
