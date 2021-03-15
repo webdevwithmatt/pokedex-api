@@ -113,4 +113,4 @@ app.listen(port, () => console.log(`Pokedex API listening on port ${port}!`));
 
 [Watch](https://www.youtube.com/watch?v=8i41Ii4u8Zc&list=PLSwIxbgo4ojtYwVrLOiX5THfQkrCixMEq&index=5)
 
-_This video makes no code changes_
+1. Download the `pokedex.db` file from this repo and put it in the root directory of your project
