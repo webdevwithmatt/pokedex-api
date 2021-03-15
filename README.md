@@ -408,3 +408,17 @@ require(`${__dirname}/routes/pokemon`);
 ```
 
 11. If you're familiar with SQL, you can make note of the SQL produced by Sequelize in the console logs in terminal
+
+### Video 7: Git & Sourcetree
+
+[Watch](https://www.youtube.com/watch?v=u3Der7M685g&list=PLSwIxbgo4ojtYwVrLOiX5THfQkrCixMEq&index=7)
+
+1. If you haven't already done so, create a `.gitignore` file at the top level of your project:
+
+`pokedex-api/.gitignore`
+```
+*/node_modules/
+```
+
+2. Stage your changes and commit it
+1. Create a new branch and name it `more_routes`
