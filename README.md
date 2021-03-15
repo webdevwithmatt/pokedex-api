@@ -422,3 +422,182 @@ require(`${__dirname}/routes/pokemon`);
 
 2. Stage your changes and commit it
 1. Create a new branch and name it `more_routes`
+
+### Video 8: Add More Routes: Catch Pokemon Endpoint
+
+[Watch](https://www.youtube.com/watch?v=gnV2IhX_SKc&list=PLSwIxbgo4ojtYwVrLOiX5THfQkrCixMEq&index=8)
+
+#### Body-Parser Middleware
+
+1. Install body-parser in terminal: `npm install body-parser --save`
+1. Import body-parser into `app.js`:
+
+`pokedex-api/api/app.js`
+```javascript
+const bodyParser = require('body-parser');
+```
+
+3. Just before the routes imports in `app.js`, use body-parser as middleware for requests and responses to parse both request bodies and response bodies as JSON:
+
+`pokedex-api/api/app.js`
+```javascript
+app.use(bodyParser.json());
+app.use((req, res, next) => {
+    res.setHeader('Content-Type', 'application/json');
+    return next();
+});
+```
+
+#### Add More Data to the GET Pokemon Endpoint
+
+4. Add more includes to the Sequelize call in the GET Pokemon endpoint:
+
+`pokedex-api/api/routes/pokemon.js`
+```javascript
+    const pokemon = await models.Pokemon.findAll({
+        include: [{
+            model: models.Evolution,
+            as: 'Evolutions',
+            include: [{
+                model: models.Pokemon,
+                as: 'EvolutionTargetPokemon',
+            }],
+        }, {
+            model: models.Evolution,
+            as: 'Devolutions',
+                include: [{
+                model: models.Pokemon,
+                as: 'EvolutionSourcePokemon',
+            }],
+        }, {
+            model: models.Location,
+            as: 'Locations',
+        }, {
+            model: models.Move,
+            as: 'Moves',
+        }, {
+            model: models.Type,
+            as: 'Types',
+        }],
+    });
+```
+
+5. Save that file and test it by starting your server in terminal (`node app.js`) and sending the request in Postman.
+- If it worked, you should see more data in each Pokemon object in the response, such as `Evolutions`, `Locations`, etc.
+
+#### Create the Catch Pokemon Endpoint
+
+1. Create the Catch Pokemon endpoint (this one is a POST request instead of a GET):
+
+`pokedex-api/api/routes/pokemon.js`
+```javascript
+app.post('/trainer/:trainerId/catch/:pokemonId', async (req, res) => {
+
+});
+```
+- Note the `:trainerId` and `:pokemonId` in the path. These are placeholders for actually IDs that we can pass in when we send the request, e.g. `/trainer/2/catch/4`, meaning trainer 2 will catch Pokemon 4.
+
+2. Assign the client input to variables:
+
+`pokedex-api/api/routes/pokemon.js`
+```javascript
+    const { trainerId, pokemonId } = req.params; // get these from the path variables
+    const nickname = req.body.nickname || req.query.nickname || null; // get this from the body, or if undefined, from the query string
+```
+
+3. Retrieve the trainer and Pokemon records corresponding to the IDs passed in by the client:
+
+`pokedex-api/api/routes/pokemon.js`
+```javascript
+    const trainer = await models.Trainer.findByPk(trainerId);
+    const pokemon = await models.Pokemon.findByPk(pokemonId);
+```
+
+4. Check to make sure the trainer and Pokemon were found, and if so, create a new Pokemon-Trainer association (signifying the Pokemon was caught by that trainer):
+
+`pokedex-api/api/routes/pokemon.js`
+```javascript
+    if (trainer) {
+        if (pokemon) {
+            await models.PokemonTrainer.create({
+                pokemonId,
+                trainerId,
+                nickname,
+                seen: true,
+                caught: true,
+            });
+        } else {
+
+        }
+    } else {
+
+    }
+```
+
+5. If the trainer or Pokemon were **NOT** found, send an error response back to the client:
+
+`pokedex-api/api/routes/pokemon.js`
+```javascript
+    if (trainer) {
+        if (pokemon) {
+            /* ... */
+        } else {
+            return res.status(404).send({
+                message: `Pokemon ${pokemonId} not found`,
+            });
+        }
+    } else {
+        return res.status(404).send({
+            message: `Trainer ${trainerId} not found`,
+        });
+    }
+```
+
+6. At the end of the function, return a message stating that the request was successful:
+
+`pokedex-api/api/routes/pokemon.js`
+```javascript
+    return res.send({
+        message: `${trainer.name} caught ${pokemon.name}!`,
+    });
+```
+
+7. Because Sequelize transactions can be prone to errors, wrap the `PokemonTrainer.create()` call in a `try-catch` block and send an error response if it catches an error:
+
+`pokedex-api/api/routes/pokemon.js`
+```javascript
+            try {
+                await models.PokemonTrainer.create({
+                    /* ... */
+                });
+            } catch (error) {
+                return res.status(500).send({
+                    message: 'There was problem catching the Pokemon.',
+                    error,
+                });
+            }
+```
+
+8. Save the file and start your server (`node app.js`)
+1. In Postman, open a new tab and change the request method to "POST"
+1. Type `http://localhost:3000/trainer/:trainerId/catch/:pokemonId` in the URL bar
+1. Under "Path Variables", enter a trainer ID and Pokemon ID (must exist in the database)
+1. Optionally add a nickname for the Pokemon you're going to catch in one of two ways. Assuming your Pokemon's nickname will be "Charmy":
+- Append this to the URL `?nickname=Charmy` (this is a query string)
+- Go to the "Body" tab and change the body type in the dropdown to "raw". In the second dropdown, change it to "JSON". Add this JSON to your body:
+
+```json
+{
+    "nickname": "Charmy"
+}
+```
+
+13. Click "Send" and you should see this response (assuming you used trainer ID 2 and Pokemon ID 4):
+
+```json
+{
+    "message": "Gary Oak caught Charmander!"
+}
+```
+- You should also see a new record appear in the `pokemon_trainers` table in your database
+
