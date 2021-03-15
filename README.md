@@ -65,35 +65,35 @@ cd /path/to/your/project/api
 1. Create a file in the `api` directory called `app.js`
 1. In `app.js` import Express:
 
-`pokedex-api/api/api.js`
+`pokedex-api/api/app.js`
 ```javascript
 const express = require('express');
 ```
 
 3. Create the server:
 
-`pokedex-api/api/api.js`
+`pokedex-api/api/app.js`
 ```javascript
 const app = express();
 ```
 
 4. Define your server's port:
 
-`pokedex-api/api/api.js`
+`pokedex-api/api/app.js`
 ```javascript
 const port = 3000;
 ```
 
 5. Add a test "Hello World" endpoint:
 
-`pokedex-api/api/api.js`
+`pokedex-api/api/app.js`
 ```javascript
 app.get('/hello', (req, res) => {
 	res.send('Hello World!');
 });
 ```
 6. Start your server listening on your port:
-`pokedex-api/api/api.js`
+`pokedex-api/api/app.js`
 ```javascript
 app.listen(port, () => console.log(`Pokedex API listening on port ${port}!`));
 ```
