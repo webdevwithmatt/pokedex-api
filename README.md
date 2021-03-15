@@ -110,3 +110,9 @@ app.listen(port, () => console.log(`Pokedex API listening on port ${port}!`));
 1. Click the "Send" button
  -  If everything is working, you should see `Hello World!` in the response pane.
 7. Open your terminal/command prompt window and press Ctrl + C to stop the server
+
+### Video 5: Browsing the Data
+
+[Watch](https://www.youtube.com/watch?v=8i41Ii4u8Zc&list=PLSwIxbgo4ojtYwVrLOiX5THfQkrCixMEq&index=5)
+
+_This video makes no code changes_
