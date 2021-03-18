@@ -40,7 +40,8 @@ app.post('/trainer/:trainerId/catch/:pokemonId', async (req, res) => {
     const pokemon = await models.Pokemon.findByPk(pokemonId);
 
     if (trainer) {
-        if (pokemon) {try {
+        if (pokemon) {
+            try {
                 await models.PokemonTrainer.create({
                     pokemonId,
                     trainerId,
