@@ -65,8 +65,44 @@ app.post('/trainer/:trainerId/catch/:pokemonId', async (req, res) => {
             message: `Trainer ${trainerId} not found`,
         });
     }
-    
+
     return res.send({
         message: `${trainer.name} caught ${pokemon.name}!`,
+    });
+});
+
+app.delete('/trainer/:trainerId/release/:pokemonId', async (req, res) => {
+    const { trainerId, id } = req.params;
+
+    const trainer = await models.Trainer.findByPk(trainerId);
+    const pokemon = await models.Pokemon.findByPk(pokemonId);
+
+    if (trainer) {
+        if (pokemon) {
+            try {
+                await models.PokemonTrainer.destroy({
+                    where: {
+                        id,
+                    }
+                });
+            } catch (error) {
+                return res.status(500).send({
+                    message: 'There was problem releasing the Pokemon.',
+                    error,
+                });
+            }
+        } else {
+            return res.status(404).send({
+                message: `PokemonTrainer ${id} not found`,
+            });
+        }
+    } else {
+        return res.status(404).send({
+            message: `Trainer ${trainerId} not found`,
+        });
+    }
+    
+    return res.send({
+        message: `${trainer.name} released ${pokemon.name}. Bye ${pokemon.name}!`,
     });
 });
