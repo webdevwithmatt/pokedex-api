@@ -600,3 +600,120 @@ app.post('/trainer/:trainerId/catch/:pokemonId', async (req, res) => {
 }
 ```
 - You should also see a new record appear in the `pokemon_trainers` table in your database
+
+### Video 9: Add More Routes: Release Pokemon Route
+
+[Watch](https://www.youtube.com/watch?v=xq--TDhYcbw&list=PLSwIxbgo4ojtYwVrLOiX5THfQkrCixMEq&index=9)
+
+1. Add a Release Pokemon route to `routes/pokemon.js` (with a method of DELETE instead of POST):
+
+`pokedex-api/api/routes/pokemon.js`
+```javascript
+app.delete('/trainer/:trainerId/release/:id', async (req, res) => {
+
+});
+```
+- Note, the `:id` param refers to an `id` in the `pokemon_trainers` table
+
+2. Assign the client input to variables:
+
+`pokedex-api/api/routes/pokemon.js`
+```javascript
+    const { trainerId, id } = req.params;
+```
+
+3. Retrieve the trainer and Pokemon records corresponding to the IDs passed in by the client. To get the Pokemon, we'll need to join the `pokemon` to the `pokemon_trainers` table:
+
+`pokedex-api/api/routes/pokemon.js`
+```javascript
+    const trainer = await models.Trainer.findByPk(trainerId);
+    const pokemon = await models.Pokemon.findOne({
+        include: [{
+            model: models.PokemonTrainer,
+            as: 'PokemonTrainer',
+            where: {
+                id,
+            },
+        }],
+    });
+```
+
+4. Similar to how we did it in the Catch Pokemon endpoint, check to make sure the trainer and Pokemon were found, but this time, delete the Pokemon-Trainer association (signifying the Pokemon was released by that trainer):
+
+`pokedex-api/api/routes/pokemon.js`
+```javascript
+    if (trainer) {
+        if (pokemon) {
+            try {
+                await models.PokemonTrainer.destroy({
+                    where: {
+                        id,
+                    }
+                });
+            } catch (error) {
+
+            }
+        } else {
+
+        }
+    } else {
+
+    }
+```
+
+5. If the trainer or Pokemon were **NOT** found, send an error response back to the client:
+
+`pokedex-api/api/routes/pokemon.js`
+```javascript
+    if (trainer) {
+        if (pokemon) {
+            /* ... */
+        } else {
+            return res.status(404).send({
+                message: `PokemonTrainer ${id} not found`,
+            });
+        }
+    } else {
+        return res.status(404).send({
+            message: `Trainer ${trainerId} not found`,
+        });
+    }
+```
+
+6. At the end of the function, return a message stating that the request was successful:
+
+`pokedex-api/api/routes/pokemon.js`
+```javascript
+    return res.send({
+        message: `${trainer.name} released ${pokemon.name}. Bye ${pokemon.name}!`,
+    });
+```
+
+7. If there was an error deleting the record, send an error response:
+
+`pokedex-api/api/routes/pokemon.js`
+```javascript
+            try {
+                await models.PokemonTrainer.create({
+                    /* ... */
+                });
+            } catch (error) {
+                return res.status(500).send({
+                    message: 'There was problem releasing the Pokemon.',
+                    error,
+                });
+            }
+```
+
+8. Save the file and start your server (`node app.js`)
+1. In Postman, open a new tab and change the request method to "DELETE"
+1. Type `http://localhost:3000/trainer/:trainerId/release/:id` in the URL bar
+1. Under "Path Variables", enter a trainer ID and PokemonTrainer ID (must exist in the database)
+1. Click "Send" and you should see this response (assuming you used trainer ID 2 and PokemonTrainer ID 1):
+
+```json
+{
+    "message": "Gary Oak released Charmander. Bye Charmander!"
+}
+```
+- You should also see the record in the `pokemon_trainers` table with a `deleted` date
