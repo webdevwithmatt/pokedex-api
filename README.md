@@ -102,9 +102,9 @@ app.listen(port, () => console.log(`Pokedex API listening on port ${port}!`));
 1. Open terminal/command prompt and make sure you're in the directory that `app.js` is located in
 1. Start the server by typing `node app.js` and press Enter
  - If everything is working, you should see `Pokedex API listening on port 3000!`
-1. Open Postman
+3. Open Postman
 1. Click "+" to open a new request tab
 1. In the URL bar, type `http://localhost:3000/hello`
 1. Click the "Send" button
  -  If everything is working, you should see `Hello World!` in the response pane.
-1. Open your terminal/command prompt window and press Ctrl + C to stop the server
+7. Open your terminal/command prompt window and press Ctrl + C to stop the server
