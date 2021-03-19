@@ -717,3 +717,273 @@ app.delete('/trainer/:trainerId/release/:id', async (req, res) => {
 }
 ```
 - You should also see the record in the `pokemon_trainers` table with a `deleted` date
+
+### Video 10: Authentication: Setup
+
+[Watch](https://www.youtube.com/watch?v=-kICsWb_Yqc&list=PLSwIxbgo4ojtYwVrLOiX5THfQkrCixMEq&index=10)
+
+1. In terminal, install some more packages:
+
+```
+npm install bcrypt dotenv jsonwebtoken child_process --save
+```
+
+2. Create a file called `.sample.env` at the same level as your `app.js` file and add the following to it:
+
+`pokedex-api/api/.sample.env`
+```
+ACCESS_TOKEN_SECRET=
+REFRESH_TOKEN_SECRET=
+MIN_PASSWORD_LENGTH=
+```
+
+3. Copy that file and name the new file `.env`
+1. Add `.env` to your `.gitignore` file
+1. In terminal, generate an access token secret and refresh token secret:
+
+```
+node
+```
+```
+require('crypto').pseudoRandomBytes(64).toString('hex');
+```
+```
+require('crypto').pseudoRandomBytes(64).toString('hex');
+```
+```
+.exit
+```
+
+6. Copy and paste the first output of the `pseudoRandomBytes` method as the value of `ACCESS_TOKEN_SECRET` in `.env` and the second output as the value of `REFRESH_TOKEN_SECRET`. Then set `MIN_PASSWORD_LENGTH` to the number of characters you want to require for a new user's password, such as 10:
+
+`pokedex-api/api/.env`
+```
+ACCESS_TOKEN_SECRET=268c5eaa6001ab4eda0b53588828e8fa9090b90aac24da334f9912bb3fa75a6856a95f4baabf29b6220a52370fd9a4972741f56beb460bd53d483e6d54303916
+REFRESH_TOKEN_SECRET=333996bceb99760d5ab245687aa178fda68c79b2617e5e00ad4ee68a870a56bdc173bdd86e7ad8f80ff2e2b6886cf6229e5d87840fe4c48f9550381206926f46
+MIN_PASSWORD_LENGTH=10
+```
+
+7. Import the properties from `.env` into `app.js` (at the top):
+
+`pokedex-api/api/app.js`
+```javascript
+require('dotenv').config();
+```
+
+8. Import `jsonwebtoken` into `app.js`:
+
+`pokedex-api/api/app.js`
+```javascript
+const jwt = require('jsonwebtoken');
+```
+
+9. Add `jwt` to `envVars.requires` in `app.js`:
+
+`pokedex-api/api/app.js`
+```javascript
+module.exports.envVars = {
+    app,
+    requires: {
+        jwt,
+    	Sequelize,
+    	sequelize,
+    },
+};
+```
+
+10. Close the Sequelize connection when the server quits (just before the `app.listen` call):
+`pokedex-api/api/app.js`
+```javascript
+process.on('exit', () => {
+    sequelize.close();
+});
+```
+
+
+11. Copy `app.js` and name the new file `authServer.js`. This will be a separate server that runs alongside our main server to keep authentication separate for added security. The differences are as follows:
+
+`pokedex-api/api/authServer.js`
+```diff
+require('dotenv').config();
+
++ const bcrypt = require('bcrypt');
+const bodyParser = require('body-parser');
+const express = require('express');
+const jwt = require('jsonwebtoken');
++ const path = require('path');
+const Sequelize = require('sequelize');
+
+- const app = express();
++ const authServer = express();
+- const port = 3000;
++ const port = 4000;
+
+const sequelize = new Sequelize({
+    dialect: 'sqlite',
+    storage: `${__dirname}/../pokedex.db`,
+});
+
+module.exports.envVars = {
+-     app,
++     authServer,
+    requires: {
++         bcrypt,
+        jwt,
++         path,
+    	Sequelize,
+    	sequelize,
+    },
+};
+
+const models = require(`${__dirname}/models/models`);
+module.exports.envVars.models = models;
+
+- app.use(bodyParser.json());
++ authServer.use(bodyParser.json());
+- app.use((req, res, next) => {
++ authServer.use((req, res, next) => {
+    res.setHeader('Content-Type', 'application/json');
+    return next();
+});
+
+- require(`${__dirname}/routes/pokemon`);
++ require(`${__dirname}/routes/auth`);
+
+process.on('exit', () => {
+    sequelize.close();
+});
+
+- app.listen(port, () => console.log(`Pokedex API listening on port ${port}!`));
++ authServer.listen(port, () => console.log(`AuthServer listening on port ${port}!`));
+
+```
+
+12. Import `child_process.spawn` into `app.js` to start the Auth Server when the main server starts:
+
+`pokedex-api/api/app.js`
+```javascript
+const { spawn } = require('child_process');
+```
+
+13. Run the Auth Server within the main server. Just before the `process.on('exit')` definition in `app.js`, add this:
+
+`pokedex-api/api/app.js`
+```javascript
+const child = spawn('node', ['authServer.js']);
+```
+
+14. Print the output from the Auth Server in the main server's logs:
+
+`pokedex-api/api/app.js`
+```javascript
+child.stdout.on('data', (chunk) => {
+    console.log('[AuthServer]', `${chunk}`.trim());
+});
+```
+
+15. Log a message if the Auth Server quits:
+
+`pokedex-api/api/app.js`
+```javascript
+child.on('close', (code) => {
+    console.log(`AuthServer exited with code ${code}`);
+});
+```
+
+16. Close the Auth Server when the main server quits (add this within the existing `process.on('exit')` callback function):
+
+`pokedex-api/api/app.js`
+```javascript
+    child.stdin.pause();
+    child.kill();
+```
+
+#### Add the Authentication Middleware
+
+1. Create a new directory at the same level as `app.js` called `middleware`
+1. Create a new file named `auth.js` and save it in the `middleware` directory
+1. Import dependencies:
+
+`pokedex-api/api/middleware/auth.js`
+```javascript
+const { envVars } = module.parent.exports;
+const { jwt } = envVars.requires;
+```
+
+4. Create the token authenticator middleware function:
+
+`pokedex-api/api/middleware/auth.js`
+```javascript
+module.exports.authenticateToken = (req, res, next) => {
+
+};
+```
+
+5. In the middleware function, retrieve the access token from the Authorization header:
+
+`pokedex-api/api/middleware/auth.js`
+```javascript
+    const authHeader = req.headers.authorization;
+    const token = authHeader?.split(' ')[1];
+```
+
+6. If the client didn't pass in a token, send an error response:
+
+`pokedex-api/api/middleware/auth.js`
+```javascript
+    if (!token) {
+        return res.status(401).send({
+            message: 'Unauthorized',
+        });
+    }
+```
+
+7. Otherwise, verify the token against the `ACCESS_TOKEN_SECRET`:
+
+`pokedex-api/api/middleware/auth.js`
+```javascript
+    return jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, trainer) => {
+
+    });
+```
+
+8. In the callback function, check if `err` is undefined (signifying that the token is invalid, or possibly some other error), and if so, send an error response:
+
+`pokedex-api/api/middleware/auth.js`
+```javascript
+        if (err) {
+            return res.status(403).send({
+                message: 'Forbidden',
+            });
+        }
+```
+
+9. If the token checks out, add the `trainer` (i.e. user) object to the request and pass it along the request chain:
+
+`pokedex-api/api/middleware/auth.js`
+```javascript
+        req.trainer = trainer;
+        return next();
+```
+
+10. Make the middleware available to other routes by first adding a `middleware` object to the `envVars`:
+
+`pokedex-api/api/app.js`
+```javascript
+module.exports.envVars = {
+    app,
+    middleware: {},
+    requires: {
+        jwt,
+    	Sequelize,
+    	sequelize,
+    },
+};
+```
+
+11. Then add the auth middleware we created to this object (just after the exist `app.use()` middleware methods):
+
+`pokedex-api/api/app.js`
+```javascript
+module.exports.envVars.middleware = { auth: require(`${__dirname}/middleware/auth`) };
+```
