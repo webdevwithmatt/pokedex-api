@@ -1,6 +1,10 @@
+require('dotenv').config();
+
 const bodyParser = require('body-parser');
 const express = require('express');
+const jwt = require('jsonwebtoken');
 const Sequelize = require('sequelize');
+const { spawn } = require('child_process');
 
 const app = express();
 const port = 3000;
@@ -12,7 +16,9 @@ const sequelize = new Sequelize({
 
 module.exports.envVars = {
     app,
+    middleware: {},
     requires: {
+    	jwt,
     	Sequelize,
     	sequelize,
     },
@@ -27,6 +33,22 @@ app.use((req, res, next) => {
     return next();
 });
 
+module.exports.envVars.middleware = { auth: require(`${__dirname}/middleware/auth`) };
+
 require(`${__dirname}/routes/pokemon`);
+
+const child = spawn('node', ['authServer.js']);
+child.stdout.on('data', (chunk) => {
+    console.log('[AuthServer]', `${chunk}`.trim());
+});
+child.on('close', (code) => {
+    console.log(`AuthServer exited with code ${code}`);
+});
+
+process.on('exit', () => {
+    child.stdin.pause();
+    child.kill();
+    sequelize.close();
+});
 
 app.listen(port, () => console.log(`Pokedex API listening on port ${port}!`));
