@@ -995,3 +995,148 @@ Pokedex API listening on port 3000!
 AuthServer listening on port 4000!
 ```
 - If you get a message saying `AuthServer exited with code`, you can see what the error is by running `node authServer.js`
+
+### Video 11: Authentication: Register Endpoint
+
+1. Create a file in the `routes` directory called `auth.js`.
+1. Import dependencies into the `auth.js` route file:
+
+`pokedex-api/api/routes/auth.js`
+```javascript
+const { envVars } = module.parent.exports;
+const { authServer, models } = envVars;
+const { bcrypt, jwt, Sequelize } = envVars.requires;
+const { Op } = Sequelize;
+const { promisify } = require('util');
+```
+
+3. Start creating the register route:
+
+`pokedex-api/api/routes/auth.js`
+```javascript
+authServer.post('/register', async (req, res) => {
+
+});
+```
+
+4. Retrieve params from the request body:
+
+`pokedex-api/api/routes/auth.js`
+```javascript
+    const {
+        name,
+        username,
+        email,
+        password,
+        picture,
+        hometownId,
+        gender,
+        birthday,
+    } = req.body;
+```
+
+5. Validate the password. If no password was supplied, or the password is less than the minimum required size, send an error response:
+
+`pokedex-api/api/routes/auth.js`
+```javascript
+    if (!password || password.length() < parseInt(process.env.MIN_PASSWORD_LENGTH, 10)) {
+        return res.status(400).send({
+            message: 'There was a problem registering. Make sure your password follows the guidelines.',
+        });
+    }
+```
+
+6. Validate the name, username, and email fields. If they are null, send an error response:
+
+`pokedex-api/api/routes/auth.js`
+```javascript
+    if (!name) {
+        return res.status(400).send({
+            message: 'There was a problem registering. Name is required.',
+        });
+    }
+
+    if (!username) {
+        return res.status(400).send({
+            message: 'There was a problem registering. Username is required.',
+        });
+    }
+
+    if (!email) {
+        return res.status(400).send({
+            message: 'There was a problem registering. Email is required.',
+        });
+    }
+```
+
+7. Salt and hash the password, then store the new trainer (i.e. user) in the database:
+
+`pokedex-api/api/routes/auth.js`
+```javascript
+    try {
+        const salt = await bcrypt.genSalt();
+        const hashedPassword = await bcrypt.hash(password, salt);
+        await models.Trainer.create({
+            name,
+            username,
+            email,
+            password: hashedPassword,
+            picture: picture || null,
+            hometownId: hometownId || null,
+            gender: gender || null,
+            birthday: birthday ? new Date(birthday) : null,
+        });
+    } catch (error) {
+
+    }
+```
+
+8. If the trainer is created successfully, send a success response. Otherwise, check if it failed because the trainer already exists, and send the appropriate error response:
+
+`pokedex-api/api/routes/auth.js`
+```javascript
+    try {
+        /* ... */
+
+        return res.status(201).send({
+            message: 'Thank you for registering!',
+        });
+    } catch (error) {
+        if (error.name === 'SequelizeUniqueConstraintError') {
+            return res.status(409).send({
+                message: 'There was a problem registering. User already exists.',
+                error,
+            });
+        }
+
+        return res.status(500).send({
+            message: 'There was a problem registering.',
+            error,
+        });
+    }
+```
+
+#### Test the Register Endpoint
+
+1. Start your server (`node app.js`)
+1. Open a new tab in Postman
+1. Select "POST" as the method from the dropdown menu
+1. Enter `http://localhost:4000/register` in the URL bar
+1. Click on the "Body" tab
+1. Select "raw" as the body type, and "JSON" as the secondary type from the dropdown menus
+1. Add a request body with user info, for example:
+
+```json
+{
+    "name": "Matt",
+    "username": "matt",
+    "email": "matt@pokemon.fakenet",
+    "password": "P@s$w0rd123!",
+    "hometownId": 26,
+    "gender": "m",
+    "birthday": "01-01-1980"
+}
+```
+
+8. Click "Send"
+1. If successful, you should see a new record appear in the `trainers` table
