@@ -1144,3 +1144,178 @@ authServer.post('/register', async (req, res) => {
 
 8. Click "Send"
 - If successful, you should see a new record appear in the `trainers` table
+
+### Video 12: Authentication: Log In Endpoint
+
+1. Create a function to generate the date/time at which the access token will expire, and also set a default access token expiration time (in minutes):
+`pokedex-api/api/routes/auth.js`
+```javascript
+const expiresInMinutes = 30;
+
+const getExpiresAt = (minutes) => {
+    let expiresAt = new Date();
+    return new Date(expiresAt.getTime() + (minutes * 60 * 1000));
+};
+```
+
+2. Create a couple of functions to generate the access and refresh tokens:
+`pokedex-api/api/routes/auth.js`
+```javascript
+const generateAccessToken = (payload) => promisify(jwt.sign)(payload, process.env.ACCESS_TOKEN_SECRET, { expiresIn: `${expiresInMinutes}m` });
+
+const generateRefreshToken = (payload) => promisify(jwt.sign)(payload, process.env.REFRESH_TOKEN_SECRET);
+```
+
+3. Create a new "POST" route in the `auth.js` routes file:
+
+`pokedex-api/api/routes/auth.js`
+```javascript
+authServer.post('/login', async (req, res) => {
+
+});
+```
+
+4. Check to make sure either the email or username field has been sent to the server in the request, and send an error response if not:
+`pokedex-api/api/routes/auth.js`
+```javascript
+    if (!req.body.username && !req.body.email) {
+        return res.status(401).send({
+            message: 'There was a problem logging in. Please check to make sure your email and password are correct and try again.',
+        });
+    }
+```
+- Note: We want to keep this message fairly generic for security purposes. We don't want to give more specific information about what was wrong with the request (i.e. was it the email that was wrong, or maybe the password?) because an intruder could use this to help themselves gain access.
+
+5. Find the trainer record in the database based on the email OR username that was sent with the request:
+
+`pokedex-api/api/routes/auth.js`
+```javascript
+    const trainer = await models.Trainer.findOne({
+        where: {
+            [Op.and]: {
+                ...(req.body.email ? { email: req.body.email } : {}),
+                ...(req.body.username ? { username: req.body.username } : {}),
+            }
+        },
+        raw: true,
+    });
+```
+- There are a few interesting things going on here. Let's break it down:
+  - `models.Trainer.findOne` finds only one trainer (rather than a list of them) in the database that match the where conditions
+  - The `[Op.and]` key creates a composite condition made up of the sub-conditions inside the value object all added together with the `AND` operator, producting SQL such as the following:
+  ```
+  WHERE email = 'someone@nomail.net' AND username = 'someuser123'
+  ```
+  - `raw: true` is just saying that all we want is the data stored in the database, not all the extra properties that usually exist on Sequelize objects
+  - `const myVar = someVariable ? someValue : anotherValue` is a ternary, which is essentially a one-line `if` statement. The expression before the `?` is the condition to check, so here we are checking if `someVariable` is defined, and if so, we set the value of `myVar` equal to `someValue`, otherwise we set the value of `myVar` equal to `anotherValue`. In our situation, we aren't setting the value of a specific variable equal to anything, but more on that next.
+  - Putting the spread operator `...` before an object `...{ someKey: someValue }` inside another object `{ ...{ someKey: someValue } }` take all the key-value pairs from the inside object and adds them to the outside object
+  - Putting this all together like so `...(req.body.email ? { email: req.body.email } : {})` makes it so that we check if `req.body.email` is defined. If so, we add all the keys in this object `{ email: req.body.email }` to the `[Op.and]` object, otherwise we leave it blank.
+  - So essentially what we are doing is checking both the email and username sent to the server in the request and finding the trainer that has an email and username to match both. However, if only one is set, that is okay too, as we want to allow our users to login with either their email or username.
+
+6. Check to make sure `trainer` is defined, i.e. the trainer exists in the database. If not, send an error response:
+
+`pokedex-api/api/routes/auth.js`
+```javascript
+    if (!trainer) {
+        return res.status(401).send({
+            message: 'There was a problem logging in. Please check to make sure your email and password are correct and try again.',
+        });
+    }
+```
+- Note: Once again, we want to keep this message fairly generic for security purposes. See the note on step #2 for more info.
+
+7. Verify the password and send an error response if it's incorrect:
+
+`pokedex-api/api/routes/auth.js`
+```javascript
+    try {
+        if (!(await bcrypt.compare(req.body.password, trainer.password))) {
+            return res.status(401).send({
+                message: 'There was a problem logging in. Please check to make sure your email and password are correct and try again.',
+            });
+        }
+    } catch (error) {
+
+    }
+```
+
+8. If the password is correct, generate a new set of tokens and store a hashed refresh token in the database:
+
+`pokedex-api/api/routes/auth.js`
+```javascript
+    let accessToken = null;
+    let refreshToken = null;
+
+    try {
+        /* ... */
+
+        accessToken = await generateAccessToken(trainer);
+        refreshToken = await generateRefreshToken(trainer);
+
+        const salt = await bcrypt.genSalt();
+        const hashedRefreshToken = await bcrypt.hash(refreshToken, salt);
+
+        await models.Token.create({
+            trainerId: trainer.id,
+            refreshToken: hashedRefreshToken,
+        });
+    } catch (error) {
+
+    }
+```
+
+9. If there was an error in this process, or if the access token or refresh token were not generated, send an error response (in two places):
+
+`pokedex-api/api/routes/auth.js`
+```javascript
+    try {
+        /* ... */
+    } catch (error) {
+        return res.status(500).send({
+            message: 'There was a problem logging in.',
+            error,
+        });
+    }
+
+    if (!accessToken || !refreshToken) {
+        return res.status(500).send({
+            message: 'There was a problem logging in.',
+        });
+    }
+```
+
+10. If everything worked as expected, i.e. the tokens were generated and stored correctly, we can send a success response with the tokens back to the client:
+
+`pokedex-api/api/routes/auth.js`
+```javascript
+    return res.send({
+        expiresInSeconds: expiresInMinutes * 60,
+        expiresAt: getExpiresAt(expiresInMinutes),
+        accessToken,
+        refreshToken,
+    });
+```
+
+#### Test the Log In Endpoint
+
+1. Start your server (`node app.js`)
+1. Open a new tab in Postman
+1. Select "POST" as the method from the dropdown menu
+1. Enter `http://localhost:4000/login` in the URL bar
+1. Click on the "Body" tab
+1. Select "raw" as the body type, and "JSON" as the secondary type from the dropdown menus
+1. Add a request body with the username or email and the password for the trainer you created previously, for example:
+
+```json
+{
+    "email": "matt@pokemon.fakenet",
+    "password": "P@s$w0rd123!"
+}
+```
+- You should test sending both a username and an email to make sure the logic works both ways
+- If you want to use any of the sample trainers in the `trainers` table, the password for all of them is the same: "`iWannaB3teHV3ry3est`"
+
+8. Click "Send"
+- If successful, you should see a response with an access token and refresh token
+- You should also see the date/time that the access token expires at in the response.
+9. Save the access and refresh tokens somewhere for later use.
