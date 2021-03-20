@@ -1107,6 +1107,8 @@ authServer.post('/register', async (req, res) => {
             });
         }
 
+        console.error(error);
+
         return res.status(500).send({
             message: 'There was a problem registering.',
             error,
