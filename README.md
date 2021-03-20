@@ -996,6 +996,8 @@ AuthServer listening on port 4000!
 
 ### Video 11: Authentication: Register Endpoint
 
+[Watch](https://www.youtube.com/watch?v=1aRkjAxVP3w&list=PLSwIxbgo4ojtYwVrLOiX5THfQkrCixMEq&index=11)
+
 1. Create a file in the `routes` directory called `auth.js`.
 1. Import dependencies into the `auth.js` route file:
 
