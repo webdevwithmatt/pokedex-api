@@ -987,3 +987,11 @@ module.exports.envVars = {
 ```javascript
 module.exports.envVars.middleware = { auth: require(`${__dirname}/middleware/auth`) };
 ```
+
+12. Test the server to make sure both the normal server and auth server start without errors (`node app.js`):
+- If successful, you should see the following messages:
+```
+Pokedex API listening on port 3000!
+AuthServer listening on port 4000!
+```
+- If you get a message saying `AuthServer exited with code`, you can see what the error is by running `node authServer.js`
