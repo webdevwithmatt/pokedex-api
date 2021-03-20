@@ -1145,6 +1145,8 @@ authServer.post('/register', async (req, res) => {
 
 ### Video 12: Authentication: Log In Endpoint
 
+[Watch](https://www.youtube.com/watch?v=91GMK_k7HUM&list=PLSwIxbgo4ojtYwVrLOiX5THfQkrCixMEq&index=12)
+
 1. Create a function to generate the date/time at which the access token will expire, and also set a default access token expiration time (in minutes):
 `pokedex-api/api/routes/auth.js`
 ```javascript
