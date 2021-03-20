@@ -1141,4 +1141,4 @@ authServer.post('/register', async (req, res) => {
 ```
 
 8. Click "Send"
-1. If successful, you should see a new record appear in the `trainers` table
+- If successful, you should see a new record appear in the `trainers` table
