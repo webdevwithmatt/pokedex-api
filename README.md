@@ -1321,3 +1321,158 @@ authServer.post('/login', async (req, res) => {
 - If successful, you should see a response with an access token and refresh token
 - You should also see the date/time that the access token expires at in the response.
 9. Save the access and refresh tokens somewhere for later use.
+
+### Video 13: Authentication: Refresh Token Endpoint
+
+[Watch](https://www.youtube.com/watch?v=sBZH32aoqn8&list=PLSwIxbgo4ojtYwVrLOiX5THfQkrCixMEq&index=13)
+
+1. Create a new "PUT" endpoint in the `auth.js` routes file:
+
+`pokedex-api/api/routes/auth.js`
+```javascript
+authServer.put('/refreshToken', async (req, res) => {
+
+});
+```
+
+2. Get the refresh token from the request body and if it's undefined, send an error response:
+
+`pokedex-api/api/routes/auth.js`
+```javascript
+    const { refreshToken } = req.body;
+
+    if (!refreshToken) {
+        return res.status(400).send({
+            message: 'There was a problem refreshing your access token. Refresh token is required.',
+        });
+    }
+```
+
+3. Verify the refresh token is valid:
+
+`pokedex-api/api/routes/auth.js`
+```javascript
+    jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET, (err, trainer) => {
+
+    });
+```
+
+
+4. In the `jwt.verify` callback, check to see if `err` is defined/not null, and if so, send an error response:
+
+`pokedex-api/api/routes/auth.js`
+```javascript
+    jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET, (err, trainer) => {
+        if (err) {
+            return res.status(403).send({
+                message: 'There was a problem refreshing your access token.',
+            });
+        }
+    });
+```
+
+5. As long as `err` is undefined/null, we can continue on and find the records in the `tokens` table that belong to the trainer:
+
+`pokedex-api/api/routes/auth.js`
+```javascript
+    jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET, (err, trainer) => {
+        /* ... */
+
+        return models.Token.findAll({
+            where: {
+                trainerId: trainer.id,
+            },
+        });
+    });
+```
+- Note: We are not awaiting the Sequelize `findAll` call. We'll be using the `.then()` method on this to resolve the promise in the next step.
+
+6. Add a `.then()` method to the `findAll` call to resolve the tokens returned by the database:
+
+`pokedex-api/api/routes/auth.js`
+```javascript
+        return models.Token.findAll({
+            where: {
+                trainerId: trainer.id,
+            },
+        }).then(async (tokens) => {
+
+        });
+```
+
+7. In the `.then()` method callback, loop over the tokens to find the token that matches the refresh token:
+
+`pokedex-api/api/routes/auth.js`
+```javascript
+        return models.Token.findAll({
+            /* ... */
+        }).then(async (tokens) => {
+            let tokenFound = false;
+            for (const token of tokens) {
+                if (await bcrypt.compare(refreshToken, token.refreshToken)) {
+                    tokenFound = false;
+                    break;
+                }
+            }
+        });
+```
+- Note: We can't simply put the refresh token in the `where` object of the `Token.findAll` query because we are storing a hashed version of the refresh token in the database, but the client is passing us the actual refresh token, meaning the query would always return an empty set
+- We loop through each of the tokens belonging to the trainer looking for the match, and when we find it, we break out of the loop. We aren't interesting in actually using the token record, but instead only care that it exists
+
+8. If the token was not found (meaning the refresh token the client sent is invalid), send an error response:
+
+`pokedex-api/api/routes/auth.js`
+```javascript
+        return models.Token.findAll({
+            /* ... */
+        }).then(async (tokens) => {
+            /* ... */
+
+            if (!tokenFound) {
+                return res.status(403).send({
+                    message: 'There was a problem refreshing your access token.',
+                });
+            }
+        });
+```
+
+9. If the token was found, generate a new access token and send it back to the client in the response. We don't need to generate a new refresh token because the refresh token is still valid:
+
+`pokedex-api/api/routes/auth.js`
+```javascript
+        return models.Token.findAll({
+            /* ... */
+        }).then(async (tokens) => {
+            /* ... */
+
+            const accessToken = await generateAccessToken(trainer);
+
+            return res.send({
+                expiresInSeconds: expiresInMinutes * 60,
+                expiresAt: getExpiresAt(expiresInMinutes),
+                accessToken,
+                refreshToken,
+            });
+        });
+```
+
+#### Test the Refresh Token Endpoint
+
+1. Start your server (`node app.js`)
+1. Open a new tab in Postman
+1. Select "PUT" as the method from the dropdown menu
+1. Enter `http://localhost:4000/refreshToken` in the URL bar
+1. Click on the "Body" tab
+1. Select "raw" as the body type, and "JSON" as the secondary type from the dropdown menus
+1. Add a request body with the refresh token you received from the login endpoint previously, for example:
+
+```json
+{
+    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
+}
+```
+
+8. Click "Send"
+- If successful, you should see a response with an access token and refresh token
+- You should also see the date/time that the access token expires at in the response.
+9. Save the access and refresh tokens somewhere for later use.

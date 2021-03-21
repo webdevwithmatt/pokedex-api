@@ -76,6 +76,53 @@ authServer.post('/login', async (req, res) => {
     });
 });
 
+authServer.put('/refreshToken', async (req, res) => {
+    const { refreshToken } = req.body;
+
+    if (!refreshToken) {
+        return res.status(400).send({
+            message: 'There was a problem refreshing your access token. Refresh token is required.',
+        });
+    }
+
+    jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET, (err, trainer) => {
+        if (err) {
+            return res.status(403).send({
+                message: 'There was a problem refreshing your access token.',
+            });
+        }
+
+        return models.Token.findAll({
+            where: {
+                trainerId: trainer.id,
+            },
+        }).then(async (tokens) => {
+            let tokenFound = false;
+            for (const token of tokens) {
+                if (await bcrypt.compare(refreshToken, token.refreshToken)) {
+                    tokenFound = false;
+                    break;
+                }
+            }
+
+            if (!tokenFound) {
+                return res.status(403).send({
+                    message: 'There was a problem refreshing your access token.',
+                });
+            }
+
+            const accessToken = await generateAccessToken(trainer);
+
+            return res.send({
+                expiresInSeconds: expiresInMinutes * 60,
+                expiresAt: getExpiresAt(expiresInMinutes),
+                accessToken,
+                refreshToken,
+            });
+        });
+    });
+});
+
 authServer.post('/register', async (req, res) => {
     const {
         name,
