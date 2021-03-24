@@ -1356,7 +1356,7 @@ authServer.put('/refreshToken', async (req, res) => {
 ```
 
 
-4. In the `jwt.verify` callback, check to see if `err` is defined/not null, and if so, send an error response:
+4. In the `jwt.verify` callback, check to make sure `err` is defined/not null, and if not, send an error response:
 
 `pokedex-api/api/routes/auth.js`
 ```javascript
