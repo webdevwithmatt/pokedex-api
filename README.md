@@ -1476,3 +1476,328 @@ authServer.put('/refreshToken', async (req, res) => {
 - If successful, you should see a response with an access token and refresh token
 - You should also see the date/time that the access token expires at in the response.
 9. Save the access and refresh tokens somewhere for later use.
+
+### Video 14: Authentication: Log Out Endpoint
+
+[Watch](https://www.youtube.com/watch?v=V-Bs57mKsbo&list=PLSwIxbgo4ojtYwVrLOiX5THfQkrCixMEq&index=14)
+
+1. Create a new "DELETE method route in `auth.js`:
+
+`pokedex-api/api/routes/auth.js`
+```javascript
+authServer.delete('/logout', async (req, res) => {
+
+});
+```
+
+2. Retrieve the refresh token from the request body and check to make sure it is defined/not null. If not, send an error response:
+
+`pokedex-api/api/routes/auth.js`
+```javascript
+    const { refreshToken } = req.body;
+
+    if (!refreshToken) {
+        return res.status(401).send({
+            message: 'There was a problem logging out. Refresh token is required.',
+        });
+    }
+```
+
+
+3. Just like in the Refresh Token endpoint, verify the refresh token is valid:
+
+`pokedex-api/api/routes/auth.js`
+```javascript
+    jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET, (err, trainer) => {
+
+    });
+```
+
+
+4. In the `jwt.verify` callback, check to make sure `err` is defined/not null, and if not, send an error response:
+
+`pokedex-api/api/routes/auth.js`
+```javascript
+    jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET, (err, trainer) => {
+        if (err) {
+            return res.status(403).send({
+                message: 'There was a problem logging out.',
+            });
+        }
+    });
+```
+
+5. As long as `err` is undefined/null, we can continue on and find the records in the `tokens` table that belong to the trainer:
+
+`pokedex-api/api/routes/auth.js`
+```javascript
+    jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET, (err, trainer) => {
+        /* ... */
+
+        return models.Token.findAll({
+            where: {
+                trainerId: trainer.id,
+            },
+        });
+    });
+```
+
+6. Add a `.then()` method to the `findAll` call to resolve the tokens returned by the database:
+
+`pokedex-api/api/routes/auth.js`
+```javascript
+        return models.Token.findAll({
+            where: {
+                trainerId: trainer.id,
+            },
+        }).then(async (tokens) => {
+
+        });
+```
+
+7. In the `.then()` method callback, check to make sure the tokens array is not empty. If it is empty, return a success response, because there are no tokens to delete (which is the whole point of logging out):
+
+`pokedex-api/api/routes/auth.js`
+```javascript
+        return models.Token.findAll({
+            /* ... */
+        }).then(async (tokens) => {
+            if (tokens.length === 0) {
+                return res.send({
+                    message: 'You have successfully logged out.',
+                });
+            }
+        });
+
+```
+
+8. Loop over the tokens to find all the tokens that match the refresh token:
+
+`pokedex-api/api/routes/auth.js`
+```javascript
+        return models.Token.findAll({
+            /* ... */
+        }).then(async (tokens) => {
+            /* ... */
+
+            let tokensToDelete = [];
+            for (const token of tokens) {
+                if (await bcrypt.compare(refreshToken, token.refreshToken)) {
+                    tokensToDelete.push(token);
+                }
+            }
+        });
+```
+
+9. If there were no tokens was found, send a success response:
+
+`pokedex-api/api/routes/auth.js`
+```javascript
+        return models.Token.findAll({
+            /* ... */
+        }).then(async (tokens) => {
+            /* ... */
+
+            if (tokensToDelete.length === 0) {
+                return res.send({
+                    message: 'You have successfully logged out.',
+                });
+            }
+        });
+```
+
+10. If tokens were found, delete them from the database (thus invalidating them):
+
+`pokedex-api/api/routes/auth.js`
+```javascript
+        return models.Token.findAll({
+            /* ... */
+        }).then(async (tokens) => {
+            /* ... */
+
+            try {
+                await models.Token.destroy({
+                    where: {
+                        id: tokensToDelete.map((token) => token.id);
+                    },
+                });
+            } catch (error) {
+
+            }
+        });
+```
+- The `tokensToDelete.map` method just takes the `tokensToDelete` array and applies a callback function `(token) => token.id` to each of its items and puts the return value of the callback into a new array. In this case, we are just getting an array of all the tokens' IDs and using them to construct our `where` object.
+
+11. If an error was thrown while trying to delete the records, send an error response:
+
+`pokedex-api/api/routes/auth.js`
+```javascript
+        return models.Token.findAll({
+            /* ... */
+        }).then(async (tokens) => {
+            /* ... */
+
+            try {
+                /* ... */
+            } catch (error) {
+                return res.status(500).send({
+                    message: 'There was a problem logging out.',
+                    error,
+                });
+            }
+        });
+```
+
+12. If everything succeeds, send a success response:
+
+`pokedex-api/api/routes/auth.js`
+```javascript
+        return models.Token.findAll({
+            /* ... */
+        }).then(async (tokens) => {
+            /* ... */
+
+            return res.send({
+                message: 'You have successfully logged out.',
+            });
+        });
+```
+
+#### Test the Log Out Endpoint
+
+1. Start your server (`node app.js`)
+1. Open a new tab in Postman
+1. Select "DELETE" as the method from the dropdown menu
+1. Enter `http://localhost:4000/logout` in the URL bar
+1. Click on the "Body" tab
+1. Select "raw" as the body type, and "JSON" as the secondary type from the dropdown menus
+1. Add a request body with the refresh token you received from the login endpoint previously, for example:
+
+```json
+{
+    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
+}
+```
+
+8. Click "Send"
+- If successful, you should see a response stating that you have successfully logged out.
+- You should also not be able to refresh your access token using the same refresh token.
+
+#### Require Authentication on Main (Pokemon) Endpoints
+
+1. In the `pokemon.js` routes file, add `middleware` to the existing `envVars` imports:
+
+`pokedex-api/api/routes/pokemon.js`
+```javascript
+const { app, middleware, models } = envVars;
+```
+
+2. Add the `authenticateToken` middleware function to the request change for each of the Pokemon endpoints:
+
+`pokedex-api/api/routes/pokemon.js`
+```javascript
+app.get('/pokemon', middleware.auth.authenticateToken, async (req, res) => { /* ... */ });
+```
+
+`pokedex-api/api/routes/pokemon.js`
+```javascript
+app.post('/trainer/:trainerId/catch/:pokemonId', middleware.auth.authenticateToken, async (req, res) => { /* ... */ });
+```
+
+`pokedex-api/api/routes/pokemon.js`
+```javascript
+app.delete('/trainer/:trainerId/release/:pokemonId', middleware.auth.authenticateToken, async (req, res) => { /* ... */ });
+```
+
+- Note: When any of these endpoints is requested, the `authenticateToken` endpoint will run first to check if the access token is valid. If it is, it will pass the client on to the main endpoint. If it's not valid, the endpoint will send an error response.
+
+#### Test the Authentication Process
+
+1. Start your server (`node app.js`)
+1. In Postman, send a request to the Log In endpoint
+1. Copy the access token and refresh token and paste it somewhere for later
+1. Go to the tab with one of the Pokemon endpoints in it
+1. Click the "Auth" tab
+1. In the "Type" dropdown menu, select "Bearer Token"
+1. In the "Token" field, paste the access token
+1. Click the "Send" button
+- If successful, you should see the normal response for that endpoint
+9. Go to the tab with another of the Pokemon endpoints in it
+1. Do not add the access token
+1. Click "Send"
+- You should see an "Unauthorized" response
+
+#### Restrict Access Within Endpoints (Authorization)
+
+We only want to allow trainers (i.e. users) to catch/release Pokemon as themselves, and not for other trainers.
+
+1. In the Catch Pokemon endpoint, remove the `trainerId` param:
+
+`pokedex-api/api/routes/pokemon.js`
+```javascript
+app.post('/trainer/catch/:pokemonId', middleware.auth.authenticateToken, async (req, res) => {
+    const { pokemonId } = req.params;
+    /* ... */
+});
+```
+
+2. Get the `trainerId` from the currently logged-in trainer object
+
+`pokedex-api/api/routes/pokemon.js`
+```javascript
+app.post('/trainer/catch/:pokemonId', middleware.auth.authenticateToken, async (req, res) => {
+    const trainerId = req.trainer?.id;
+    const { pokemonId } = req.params;
+    /* ... */
+});
+```
+
+3. Check to make sure `trainerId` is defined/non-null, but if not, send an error response:
+
+`pokedex-api/api/routes/pokemon.js`
+```javascript
+app.post('/trainer/catch/:pokemonId', middleware.auth.authenticateToken, async (req, res) => {
+    /* ... */
+    const nickname = req.body.nickname || req.query.nickname || null;
+
+    if (!trainerId) {
+        return res.status(404).send({
+            message: 'Trainer not found',
+        });
+    }
+
+    const trainer = await models.Trainer.findByPk(trainerId);
+    /* ... */
+});
+```
+
+4. Do the same from steps 1-3 in the Release Pokemon endpoint:
+
+`pokedex-api/api/routes/pokemon.js`
+```javascript
+app.delete('/trainer/release/:pokemonId', middleware.auth.authenticateToken, async (req, res) => {
+    const trainerId = req.trainer?.id;
+    const { id } = req.params;
+
+    if (!trainerId) {
+        return res.status(404).send({
+            message: 'Trainer not found',
+        });
+    }
+    /* ... */
+});
+```
+
+#### Test the Authorization
+
+1. Start your server (`node app.js`)
+1. In Postman, send a request to the Log In endpoint
+1. Copy the access token and refresh token and paste it somewhere for later
+1. Go to the tab with the Catch Pokemon endpoint in it
+1. Click the "Auth" tab
+1. In the "Type" dropdown menu, select "Bearer Token"
+1. In the "Token" field, paste the access token
+1. Click the "Send" button
+- If successful, you should see that you caught a given Pokemon
+
+**NOTE**: The access token will remain valid after you logout for up to 30 minutes (or whatever time you set for it to expire). This is normal. The client should stop using that token after they've logged out. It's up to the server to ensure they can't refresh the token after they've logged out.

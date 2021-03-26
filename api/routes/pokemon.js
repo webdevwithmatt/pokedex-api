@@ -1,7 +1,7 @@
 const { envVars } = module.parent.exports;
-const { app, models } = envVars;
+const { app, middleware, models } = envVars;
 
-app.get('/pokemon', async (req, res) => {
+app.get('/pokemon', middleware.auth.authenticateToken, async (req, res) => {
     const pokemon = await models.Pokemon.findAll({
         include: [{
             model: models.Evolution,
@@ -32,9 +32,16 @@ app.get('/pokemon', async (req, res) => {
     return res.send(pokemon);
 });
 
-app.post('/trainer/:trainerId/catch/:pokemonId', async (req, res) => {
-    const { trainerId, pokemonId } = req.params;
+app.post('/trainer/catch/:pokemonId', middleware.auth.authenticateToken, async (req, res) => {
+    const trainerId = req.trainer?.id;
+    const { pokemonId } = req.params;
     const nickname = req.body.nickname || req.query.nickname || null;
+
+    if (!trainerId) {
+        return res.status(404).send({
+            message: 'Trainer not found',
+        });
+    }
 
     const trainer = await models.Trainer.findByPk(trainerId);
     const pokemon = await models.Pokemon.findByPk(pokemonId);
@@ -71,8 +78,15 @@ app.post('/trainer/:trainerId/catch/:pokemonId', async (req, res) => {
     });
 });
 
-app.delete('/trainer/:trainerId/release/:pokemonId', async (req, res) => {
-    const { trainerId, id } = req.params;
+app.delete('/trainer/release/:pokemonId', middleware.auth.authenticateToken, async (req, res) => {
+    const trainerId = req.trainer?.id;
+    const { id } = req.params;
+
+    if (!trainerId) {
+        return res.status(404).send({
+            message: 'Trainer not found',
+        });
+    }
 
     const trainer = await models.Trainer.findByPk(trainerId);
     const pokemon = await models.Pokemon.findByPk(pokemonId);
