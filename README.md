@@ -1799,3 +1799,13 @@ app.delete('/trainer/release/:pokemonId', middleware.auth.authenticateToken, asy
 - If successful, you should see that you caught a given Pokemon
 
 **NOTE**: The access token will remain valid after you logout for up to 30 minutes (or whatever time you set for it to expire). This is normal. The client should stop using that token after they've logged out. It's up to the server to ensure they can't refresh the token after they've logged out.
+
+### Video 15: Conclusion
+
+[Watch](https://www.youtube.com/watch?v=spyzZb5Ifcs&list=PLSwIxbgo4ojtYwVrLOiX5THfQkrCixMEq&index=15)
+
+_This video makes no code changes_
+
+Thanks for following along with this guide! Hope you learned some things!
+
+If you have any suggestions, questions, or fixes, please reach out. Feel free to create an issue or pull request in this repository.
