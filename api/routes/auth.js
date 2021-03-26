@@ -76,6 +76,66 @@ authServer.post('/login', async (req, res) => {
     });
 });
 
+authServer.delete('/logout', async (req, res) => {
+    const { refreshToken } = req.body;
+
+    if (!refreshToken) {
+        return res.status(401).send({
+            message: 'There was a problem logging out. Refresh token is required.',
+        });
+    }
+
+    jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET, (err, trainer) => {
+        if (err) {
+            return res.status(403).send({
+                message: 'There was a problem logging out.',
+            });
+        }
+
+        return models.Token.findAll({
+            where: {
+                trainerId: trainer.id,
+            },
+        }).then(async (tokens) => {
+            if (tokens.length === 0) {
+                return res.send({
+                    message: 'You have successfully logged out.',
+                });
+            }
+
+            let tokensToDelete = [];
+            for (const token of tokens) {
+                if (await bcrypt.compare(refreshToken, token.refreshToken)) {
+                    tokensToDelete.push(token);
+                }
+            }
+
+            if (tokensToDelete.length === 0) {
+                return res.send({
+                    message: 'You have successfully logged out.',
+                });
+            }
+
+            try {
+                await models.Token.destroy({
+                    where: {
+                        id: tokensToDelete.map((token) => token.id);
+                    },
+                });
+            } catch (error) {
+                return res.status(500).send({
+                    message: 'There was a problem logging out.',
+                    error,
+                });
+            }
+
+            return res.send({
+                message: 'You have successfully logged out.',
+            });
+        });
+    });
+});
+
 authServer.put('/refreshToken', async (req, res) => {
     const { refreshToken } = req.body;
 
