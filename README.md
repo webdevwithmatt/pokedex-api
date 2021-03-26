@@ -3,6 +3,8 @@ This projects accompanies the video course for building a simple Pokedex REST AP
 
 [Watch the course](https://www.youtube.com/playlist?list=PLSwIxbgo4ojtYwVrLOiX5THfQkrCixMEq)
 
+[![youtube_social_icon_red](https://user-images.githubusercontent.com/36934493/112694423-f0e08400-8e47-11eb-9fc4-47539085454b.png)](https://www.youtube.com/channel/UCTaM-aIupL05-N30REc69eA)
+
 
 ## Using this repository
 
@@ -1809,3 +1811,5 @@ _This video makes no code changes_
 Thanks for following along with this guide! Hope you learned some things!
 
 If you have any suggestions, questions, or fixes, please reach out. Feel free to create an issue or pull request in this repository.
+
+And check out my [channel](https://www.youtube.com/channel/UCTaM-aIupL05-N30REc69eA) for more courses!
